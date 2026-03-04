@@ -1,7 +1,7 @@
 [project]
-name = "anthropic-proxy"
-version = "0.1.0"
-description = "Proxy that translates between Anthropic API and LiteLLM"
+name = "claude-code-proxy"
+version = "2.0.0"
+description = "Modular proxy that translates Anthropic API requests to any LLM provider via LiteLLM"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
