@@ -1,4 +1,4 @@
-"""API router for Anthropic-compatible /v1/messages endpoints."""
+"""Anthropic 호환 /v1/messages 엔드포인트를 위한 API 라우터."""
 
 from __future__ import annotations
 
@@ -29,17 +29,17 @@ router = APIRouter(prefix="/v1")
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# 헬퍼 함수
 # ---------------------------------------------------------------------------
 
 
 def _display_model(model: str) -> str:
-    """Strip provider prefix for human-readable logging."""
+    """로그용으로 프로바이더 접두사를 제거한 모델명을 반환한다."""
     return model.split("/")[-1] if "/" in model else model
 
 
 def _sanitize_for_json(obj: Any) -> Any:
-    """Recursively make *obj* JSON-serializable."""
+    """*obj*를 JSON 직렬화 가능하도록 재귀적으로 변환한다."""
     if isinstance(obj, dict):
         return {k: _sanitize_for_json(v) for k, v in obj.items()}
     if isinstance(obj, list):
@@ -66,38 +66,36 @@ async def create_message(
     raw_request: Request,
 ) -> Any:
     try:
-        # Parse raw body for the original model name (before Pydantic resolved it)
+        # 원본 모델명 파싱 (Pydantic이 해석하기 전)
         body = await raw_request.body()
         body_json = json.loads(body.decode("utf-8"))
         original_model = body_json.get("model", "unknown")
         display_model = _display_model(original_model)
 
-        logger.debug(
-            f"PROCESSING REQUEST: Model={request.model}, Stream={request.stream}"
-        )
+        logger.debug(f"요청 처리 중: 모델={request.model}, 스트리밍={request.stream}")
 
-        # 1. Convert Anthropic request -> LiteLLM dict
+        # 1. Anthropic 요청 → LiteLLM 딕셔너리 변환
         litellm_request = convert_anthropic_to_litellm(request)
 
-        # 2. Provider-specific configuration (API keys, base URL, Vertex, etc.)
+        # 2. 프로바이더별 설정 (API 키, 베이스 URL, Vertex 등)
         try:
             provider = ProviderRegistry.get(request.model)
             litellm_request = provider.configure_request(litellm_request)
 
-            # Provider-specific message pre-processing (e.g. OpenAI flattening)
+            # 프로바이더별 메시지 전처리 (예: OpenAI 평탄화)
             if "messages" in litellm_request:
                 litellm_request["messages"] = provider.preprocess_messages(
                     litellm_request["messages"]
                 )
         except ValueError:
-            logger.warning(f"No registered provider for model: {request.model}")
+            logger.warning(f"등록된 프로바이더가 없습니다: {request.model}")
 
         logger.debug(
-            f"Request for model: {litellm_request.get('model')}, "
-            f"stream: {litellm_request.get('stream', False)}"
+            f"모델 요청: {litellm_request.get('model')}, "
+            f"스트리밍: {litellm_request.get('stream', False)}"
         )
 
-        # Common logging args
+        # 공통 로깅 인자
         num_tools = len(request.tools) if request.tools else 0
         log_kwargs = dict(
             method="POST",
@@ -109,7 +107,7 @@ async def create_message(
             status_code=200,
         )
 
-        # 3a. Streaming
+        # 3a. 스트리밍
         if request.stream:
             log_request(**log_kwargs)
             response_generator = await litellm.acompletion(**litellm_request)
@@ -118,13 +116,13 @@ async def create_message(
                 media_type="text/event-stream",
             )
 
-        # 3b. Non-streaming
+        # 3b. 비스트리밍
         log_request(**log_kwargs)
         start_time = time.time()
         litellm_response = litellm.completion(**litellm_request)
         logger.debug(
-            f"RESPONSE RECEIVED: Model={litellm_request.get('model')}, "
-            f"Time={time.time() - start_time:.2f}s"
+            f"응답 수신: 모델={litellm_request.get('model')}, "
+            f"소요시간={time.time() - start_time:.2f}초"
         )
         return convert_litellm_to_anthropic(litellm_response, request)
 
@@ -145,15 +143,14 @@ async def create_message(
                     error_details[key] = str(value)
 
         logger.error(
-            f"Error processing request: "
-            f"{json.dumps(_sanitize_for_json(error_details), indent=2)}"
+            f"요청 처리 오류: {json.dumps(_sanitize_for_json(error_details), indent=2)}"
         )
 
-        error_message = f"Error: {exc}"
+        error_message = f"오류: {exc}"
         if error_details.get("message"):
-            error_message += f"\nMessage: {error_details['message']}"
+            error_message += f"\n메시지: {error_details['message']}"
         if error_details.get("response"):
-            error_message += f"\nResponse: {error_details['response']}"
+            error_message += f"\n응답: {error_details['response']}"
 
         status_code = error_details.get("status_code", 500)
         raise HTTPException(status_code=status_code, detail=error_message)
@@ -173,11 +170,11 @@ async def count_tokens(
         original_model = request.original_model or request.model
         display_model = _display_model(original_model)
 
-        # Build a temporary MessagesRequest so we can reuse the converter
+        # 변환기를 재사용하기 위해 임시 MessagesRequest 생성
         converted_request = convert_anthropic_to_litellm(
             MessagesRequest(
                 model=request.model,
-                max_tokens=100,  # arbitrary; not used for counting
+                max_tokens=100,  # 임의 값; 카운팅에는 사용되지 않음
                 messages=request.messages,
                 system=request.system,
                 tools=request.tools,
@@ -186,7 +183,7 @@ async def count_tokens(
             )
         )
 
-        # Provider-specific message pre-processing
+        # 프로바이더별 메시지 전처리
         try:
             provider = ProviderRegistry.get(request.model)
             converted_request = provider.configure_request(converted_request)
@@ -223,8 +220,8 @@ async def count_tokens(
         return TokenCountResponse(input_tokens=token_count)
 
     except Exception as exc:
-        logger.error(f"Error counting tokens: {exc}\n{traceback.format_exc()}")
+        logger.error(f"토큰 카운트 오류: {exc}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error counting tokens: {exc}",
+            detail=f"토큰 카운트 오류: {exc}",
         )

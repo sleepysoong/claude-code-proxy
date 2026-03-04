@@ -1,4 +1,4 @@
-"""Pydantic models for Anthropic-format API responses."""
+"""Anthropic 형식 API 응답을 위한 Pydantic 모델."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from app.models.request import ContentBlockText, ContentBlockToolUse
 
 
 class Usage(BaseModel):
+    """토큰 사용량 정보."""
+
     input_tokens: int
     output_tokens: int
     cache_creation_input_tokens: int = 0
@@ -17,6 +19,8 @@ class Usage(BaseModel):
 
 
 class MessagesResponse(BaseModel):
+    """Anthropic Messages API 응답 객체."""
+
     id: str
     model: str
     role: Literal["assistant"] = "assistant"
@@ -30,4 +34,6 @@ class MessagesResponse(BaseModel):
 
 
 class TokenCountResponse(BaseModel):
+    """토큰 카운트 응답 객체."""
+
     input_tokens: int

@@ -1,4 +1,4 @@
-"""OpenAI provider implementation."""
+"""OpenAI 프로바이더 구현."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ logger = logging.getLogger("app")
 
 
 class OpenAIProvider(AbstractProvider):
-    """Provider for OpenAI models (GPT-4o, GPT-4.1, o-series, etc.)."""
+    """OpenAI 모델용 프로바이더 (GPT-4o, GPT-4.1, o-시리즈 등)."""
 
     MODELS = [
         "o3-mini",
@@ -44,26 +44,26 @@ class OpenAIProvider(AbstractProvider):
         litellm_request["api_key"] = OPENAI_API_KEY
         if OPENAI_BASE_URL:
             litellm_request["api_base"] = OPENAI_BASE_URL
-            logger.debug(f"Using OpenAI custom base URL: {OPENAI_BASE_URL}")
+            logger.debug(f"OpenAI 커스텀 베이스 URL 사용: {OPENAI_BASE_URL}")
         return litellm_request
 
     def preprocess_messages(
         self, messages: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Flatten content blocks to plain strings for OpenAI compatibility."""
+        """OpenAI 호환성을 위해 콘텐츠 블록을 평문 문자열로 평탄화한다."""
         for i, msg in enumerate(messages):
             content = msg.get("content")
 
-            # Handle list content -> string
+            # 리스트 콘텐츠 → 문자열 변환
             if isinstance(content, list):
                 text = self._flatten_content_blocks(content)
                 messages[i]["content"] = text if text.strip() else "..."
 
-            # Handle None content
+            # None 콘텐츠 처리
             elif content is None:
                 messages[i]["content"] = "..."
 
-            # Remove unsupported fields
+            # 지원하지 않는 필드 제거
             allowed = {"role", "content", "name", "tool_call_id", "tool_calls"}
             for key in list(msg.keys()):
                 if key not in allowed:
@@ -75,7 +75,7 @@ class OpenAIProvider(AbstractProvider):
 
     @staticmethod
     def _flatten_content_blocks(blocks: list) -> str:
-        """Recursively extract text from heterogeneous content blocks."""
+        """이기종 콘텐츠 블록에서 텍스트를 재귀적으로 추출한다."""
         parts: list[str] = []
         for block in blocks:
             if not isinstance(block, dict):
@@ -87,7 +87,7 @@ class OpenAIProvider(AbstractProvider):
 
             elif btype == "tool_result":
                 tool_id = block.get("tool_use_id", "unknown")
-                parts.append(f"[Tool Result ID: {tool_id}]")
+                parts.append(f"[도구 결과 ID: {tool_id}]")
                 rc = block.get("content", [])
                 if isinstance(rc, list):
                     for item in rc:
@@ -105,9 +105,9 @@ class OpenAIProvider(AbstractProvider):
                 name = block.get("name", "unknown")
                 tid = block.get("id", "unknown")
                 inp = json.dumps(block.get("input", {}))
-                parts.append(f"[Tool: {name} (ID: {tid})]\nInput: {inp}")
+                parts.append(f"[도구: {name} (ID: {tid})]\n입력: {inp}")
 
             elif btype == "image":
-                parts.append("[Image content]")
+                parts.append("[이미지 콘텐츠]")
 
         return "\n".join(parts)

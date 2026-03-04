@@ -1,4 +1,4 @@
-"""Anthropic passthrough provider (for direct Anthropic API usage)."""
+"""Anthropic 패스스루 프로바이더 (직접 Anthropic API 사용 시)."""
 
 from __future__ import annotations
 
@@ -12,22 +12,22 @@ logger = logging.getLogger("app")
 
 
 class AnthropicProvider(AbstractProvider):
-    """Passthrough provider for native Anthropic / Claude models."""
+    """네이티브 Anthropic / Claude 모델용 패스스루 프로바이더."""
 
     def get_model_prefix(self) -> str:
         return "anthropic"
 
     def get_supported_models(self) -> List[str]:
-        # Claude models are accepted dynamically; we don't restrict the list.
+        # Claude 모델은 동적으로 허용되므로 목록을 제한하지 않는다.
         return []
 
     def configure_request(self, litellm_request: Dict[str, Any]) -> Dict[str, Any]:
         litellm_request["api_key"] = ANTHROPIC_API_KEY
-        logger.debug("Using Anthropic API key")
+        logger.debug("Anthropic API 키 사용")
         return litellm_request
 
     def preprocess_messages(
         self, messages: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Anthropic messages are passed through as-is via LiteLLM."""
+        """Anthropic 메시지는 LiteLLM을 통해 그대로 전달된다."""
         return messages

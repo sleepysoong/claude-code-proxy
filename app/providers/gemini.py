@@ -1,4 +1,4 @@
-"""Gemini provider implementation."""
+"""Gemini 프로바이더 구현."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ logger = logging.getLogger("app")
 
 
 class GeminiProvider(AbstractProvider):
-    """Provider for Google Gemini models."""
+    """Google Gemini 모델용 프로바이더."""
 
     MODELS = [
         "gemini-2.5-flash",
@@ -34,26 +34,26 @@ class GeminiProvider(AbstractProvider):
             litellm_request["vertex_location"] = VERTEX_LOCATION
             litellm_request["custom_llm_provider"] = "vertex_ai"
             logger.debug(
-                f"Using Vertex AI ADC: project={VERTEX_PROJECT}, location={VERTEX_LOCATION}"
+                f"Vertex AI ADC 사용: 프로젝트={VERTEX_PROJECT}, 리전={VERTEX_LOCATION}"
             )
         else:
             litellm_request["api_key"] = GEMINI_API_KEY
-            logger.debug("Using Gemini API key")
+            logger.debug("Gemini API 키 사용")
         return litellm_request
 
     def preprocess_messages(
         self, messages: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Gemini generally accepts the same format as OpenAI via LiteLLM."""
+        """Gemini는 LiteLLM을 통해 OpenAI와 동일한 형식을 수용한다."""
         return messages
 
     def clean_schema(self, schema: Any) -> Any:
-        """Remove fields that Gemini tool parameters don't support."""
+        """Gemini 도구 파라미터에서 지원하지 않는 필드를 제거한다."""
         return _clean_gemini_schema(schema)
 
 
 def _clean_gemini_schema(schema: Any) -> Any:
-    """Recursively strip unsupported fields from a JSON schema for Gemini."""
+    """Gemini용 JSON 스키마에서 지원되지 않는 필드를 재귀적으로 제거한다."""
     if isinstance(schema, dict):
         schema.pop("additionalProperties", None)
         schema.pop("default", None)

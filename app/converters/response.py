@@ -1,4 +1,4 @@
-"""Convert LiteLLM (OpenAI-format) responses back to Anthropic format."""
+"""LiteLLM (OpenAI 형식) 응답을 Anthropic 형식으로 역변환한다."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def convert_litellm_to_anthropic(
     litellm_response: Union[Dict[str, Any], Any],
     original_request: MessagesRequest,
 ) -> MessagesResponse:
-    """Map a LiteLLM ``ModelResponse`` (or dict) to an Anthropic ``MessagesResponse``."""
+    """LiteLLM ``ModelResponse`` (또는 dict)를 Anthropic ``MessagesResponse``로 매핑한다."""
     try:
         clean_model = original_request.model
         for prefix in ("anthropic/", "openai/", "gemini/"):
@@ -28,7 +28,7 @@ def convert_litellm_to_anthropic(
 
         is_claude = clean_model.startswith("claude-")
 
-        # --- Extract from ModelResponse object or dict ---
+        # --- ModelResponse 객체 또는 dict에서 추출 ---
         if hasattr(litellm_response, "choices") and hasattr(litellm_response, "usage"):
             choices = litellm_response.choices
             message = choices[0].message if choices else None
@@ -49,7 +49,7 @@ def convert_litellm_to_anthropic(
             usage_info = response_dict.get("usage", {})
             response_id = response_dict.get("id", f"msg_{uuid.uuid4()}")
 
-        # --- Build content blocks ---
+        # --- 콘텐츠 블록 생성 ---
         content: list[dict[str, Any]] = []
 
         if content_text:
@@ -70,11 +70,13 @@ def convert_litellm_to_anthropic(
                         }
                     )
             else:
-                # For non-Claude models, render tool calls as text
-                tool_text = "\n\nTool usage:\n"
+                # Claude가 아닌 모델의 경우 도구 호출을 텍스트로 렌더링
+                tool_text = "\n\n도구 사용:\n"
                 for tc in tool_calls:
                     fn, tid, name, arguments = _extract_tool_call(tc)
-                    tool_text += f"Tool: {name}\nArguments: {json.dumps(arguments, indent=2)}\n\n"
+                    tool_text += (
+                        f"도구: {name}\n인자: {json.dumps(arguments, indent=2)}\n\n"
+                    )
                 if content and content[0]["type"] == "text":
                     content[0]["text"] += tool_text
                 else:
@@ -83,7 +85,7 @@ def convert_litellm_to_anthropic(
         if not content:
             content.append({"type": "text", "text": ""})
 
-        # --- Usage ---
+        # --- 사용량 ---
         if isinstance(usage_info, dict):
             prompt_tokens = usage_info.get("prompt_tokens", 0)
             completion_tokens = usage_info.get("completion_tokens", 0)
@@ -91,7 +93,7 @@ def convert_litellm_to_anthropic(
             prompt_tokens = getattr(usage_info, "prompt_tokens", 0)
             completion_tokens = getattr(usage_info, "completion_tokens", 0)
 
-        # --- Stop reason ---
+        # --- 종료 사유 ---
         stop_map = {
             "stop": "end_turn",
             "length": "max_tokens",
@@ -109,22 +111,23 @@ def convert_litellm_to_anthropic(
         )
 
     except Exception as exc:
-        logger.error(f"Error converting response: {exc}\n{traceback.format_exc()}")
+        logger.error(f"응답 변환 오류: {exc}\n{traceback.format_exc()}")
         return MessagesResponse(
             id=f"msg_{uuid.uuid4()}",
             model=original_request.model,
-            content=[{"type": "text", "text": f"Error converting response: {exc}"}],  # type: ignore[arg-type]
+            content=[{"type": "text", "text": f"응답 변환 오류: {exc}"}],  # type: ignore[arg-type]
             stop_reason="end_turn",
             usage=Usage(input_tokens=0, output_tokens=0),
         )
 
 
 # ------------------------------------------------------------------
-# Helpers
+# 헬퍼 함수
 # ------------------------------------------------------------------
 
 
 def _to_dict(obj: Any) -> dict:
+    """객체를 딕셔너리로 변환한다."""
     if isinstance(obj, dict):
         return obj
     for method in ("model_dump", "dict"):
@@ -137,7 +140,7 @@ def _to_dict(obj: Any) -> dict:
 
 
 def _extract_tool_call(tc: Any) -> tuple[Any, str, str, dict]:
-    """Return (function_obj, tool_id, name, parsed_arguments)."""
+    """(function_obj, tool_id, name, parsed_arguments)를 반환한다."""
     if isinstance(tc, dict):
         fn = tc.get("function", {})
         tid = tc.get("id", f"tool_{uuid.uuid4()}")

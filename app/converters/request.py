@@ -1,4 +1,4 @@
-"""Convert Anthropic-format requests to LiteLLM (OpenAI-compatible) format."""
+"""Anthropic 형식 요청을 LiteLLM (OpenAI 호환) 형식으로 변환한다."""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ logger = logging.getLogger("app")
 
 
 def _parse_tool_result_content(content: Any) -> str:
-    """Normalize heterogeneous tool-result content into a plain string."""
+    """이기종 도구 결과 콘텐츠를 평문 문자열로 정규화한다."""
     if content is None:
-        return "No content provided"
+        return "제공된 콘텐츠 없음"
     if isinstance(content, str):
         return content
     if isinstance(content, list):
@@ -38,11 +38,11 @@ def _parse_tool_result_content(content: Any) -> str:
 
 
 def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
-    """Build a LiteLLM-compatible request dict from an Anthropic *MessagesRequest*."""
+    """Anthropic *MessagesRequest*로부터 LiteLLM 호환 요청 딕셔너리를 생성한다."""
 
     messages: list[dict[str, Any]] = []
 
-    # --- System message ---
+    # --- 시스템 메시지 ---
     if request.system:
         if isinstance(request.system, str):
             messages.append({"role": "system", "content": request.system})
@@ -54,7 +54,7 @@ def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
             if text:
                 messages.append({"role": "system", "content": text.strip()})
 
-    # --- Conversation messages ---
+    # --- 대화 메시지 ---
     for msg in request.messages:
         content = msg.content
 
@@ -62,7 +62,7 @@ def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
             messages.append({"role": msg.role, "content": content})
             continue
 
-        # User message with tool_result blocks → flatten to text
+        # tool_result 블록이 포함된 사용자 메시지 → 텍스트로 평탄화
         if msg.role == "user" and any(
             getattr(b, "type", None) == "tool_result" for b in content
         ):
@@ -74,11 +74,11 @@ def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
                 elif bt == "tool_result":
                     tid = getattr(block, "tool_use_id", "")
                     rc = _parse_tool_result_content(getattr(block, "content", ""))
-                    parts.append(f"Tool result for {tid}:\n{rc}")
+                    parts.append(f"{tid}의 도구 결과:\n{rc}")
             messages.append({"role": "user", "content": "\n".join(parts).strip()})
             continue
 
-        # Generic block list
+        # 일반 블록 리스트
         processed: list[dict[str, Any]] = []
         for block in content:
             bt = getattr(block, "type", None)
@@ -110,7 +110,7 @@ def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
                 )
         messages.append({"role": msg.role, "content": processed})
 
-    # --- Cap max_tokens via provider ---
+    # --- 프로바이더를 통해 max_tokens 제한 ---
     max_tokens = request.max_tokens
     try:
         provider = ProviderRegistry.get(request.model)
@@ -128,7 +128,7 @@ def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
         "stream": request.stream,
     }
 
-    # Thinking (Anthropic-only)
+    # Thinking (Anthropic 전용)
     if request.thinking and request.model.startswith("anthropic/"):
         litellm_request["thinking"] = request.thinking
 
@@ -139,7 +139,7 @@ def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
     if request.top_k:
         litellm_request["top_k"] = request.top_k
 
-    # --- Tools ---
+    # --- 도구 변환 ---
     if request.tools:
         try:
             provider = ProviderRegistry.get(request.model)
@@ -164,7 +164,7 @@ def convert_anthropic_to_litellm(request: MessagesRequest) -> Dict[str, Any]:
             )
         litellm_request["tools"] = openai_tools
 
-    # --- Tool choice ---
+    # --- 도구 선택 ---
     if request.tool_choice:
         tc = request.tool_choice
         ctype = tc.get("type")

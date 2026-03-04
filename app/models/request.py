@@ -1,4 +1,4 @@
-"""Pydantic models for Anthropic-format API requests."""
+"""Anthropic 형식 API 요청을 위한 Pydantic 모델."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from app.config import BIG_MODEL, PREFERRED_PROVIDER, SMALL_MODEL
 
 logger = logging.getLogger("app")
 
-# Known model lists (used for prefix resolution)
+# 접두사 해석에 사용되는 알려진 모델 목록
 OPENAI_MODELS = [
     "o3-mini",
     "o1",
@@ -35,6 +35,7 @@ GEMINI_MODELS = [
 
 
 def _strip_prefix(model: str) -> str:
+    """모델명에서 프로바이더 접두사를 제거한다."""
     for prefix in ("anthropic/", "openai/", "gemini/"):
         if model.startswith(prefix):
             return model[len(prefix) :]
@@ -42,39 +43,39 @@ def _strip_prefix(model: str) -> str:
 
 
 def _resolve_model(original: str) -> str:
-    """Apply provider-aware model mapping rules."""
+    """프로바이더 인식 모델 매핑 규칙을 적용한다."""
     clean = _strip_prefix(original)
 
     if PREFERRED_PROVIDER == "anthropic":
         return f"anthropic/{clean}"
 
-    # haiku → SMALL_MODEL
+    # haiku → SMALL_MODEL (소형 모델)
     if "haiku" in clean.lower():
         if PREFERRED_PROVIDER == "google" and SMALL_MODEL in GEMINI_MODELS:
             return f"gemini/{SMALL_MODEL}"
         return f"openai/{SMALL_MODEL}"
 
-    # sonnet → BIG_MODEL
+    # sonnet → BIG_MODEL (대형 모델)
     if "sonnet" in clean.lower():
         if PREFERRED_PROVIDER == "google" and BIG_MODEL in GEMINI_MODELS:
             return f"gemini/{BIG_MODEL}"
         return f"openai/{BIG_MODEL}"
 
-    # Add prefix to known models
+    # 알려진 모델에 접두사 추가
     if clean in GEMINI_MODELS and not original.startswith("gemini/"):
         return f"gemini/{clean}"
     if clean in OPENAI_MODELS and not original.startswith("openai/"):
         return f"openai/{clean}"
 
-    # If already prefixed or unknown, pass through
+    # 이미 접두사가 있거나 알 수 없는 모델은 그대로 전달
     if not original.startswith(("openai/", "gemini/", "anthropic/")):
         logger.warning(
-            f"No prefix or mapping rule for model: '{original}'. Using as-is."
+            f"모델 '{original}'에 대한 접두사 또는 매핑 규칙이 없습니다. 원본 그대로 사용합니다."
         )
     return original
 
 
-# --- Content block types ---
+# --- 콘텐츠 블록 타입 ---
 
 
 class ContentBlockText(BaseModel):
@@ -130,10 +131,12 @@ class ThinkingConfig(BaseModel):
     enabled: bool = True
 
 
-# --- Request models ---
+# --- 요청 모델 ---
 
 
 class MessagesRequest(BaseModel):
+    """Anthropic Messages API 요청 본문."""
+
     model: str
     max_tokens: int
     messages: List[Message]
@@ -156,11 +159,13 @@ class MessagesRequest(BaseModel):
         values = info.data
         if isinstance(values, dict):
             values["original_model"] = v
-        logger.debug(f"MODEL MAPPING: '{v}' -> '{resolved}'")
+        logger.debug(f"모델 매핑: '{v}' -> '{resolved}'")
         return resolved
 
 
 class TokenCountRequest(BaseModel):
+    """토큰 카운트 요청 본문."""
+
     model: str
     messages: List[Message]
     system: Optional[Union[str, List[SystemContent]]] = None
@@ -176,5 +181,5 @@ class TokenCountRequest(BaseModel):
         values = info.data
         if isinstance(values, dict):
             values["original_model"] = v
-        logger.debug(f"TOKEN COUNT MAPPING: '{v}' -> '{resolved}'")
+        logger.debug(f"토큰 카운트 모델 매핑: '{v}' -> '{resolved}'")
         return resolved

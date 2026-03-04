@@ -1,4 +1,4 @@
-"""Abstract base class that every LLM provider must implement."""
+"""모든 LLM 프로바이더가 구현해야 하는 추상 기본 클래스."""
 
 from __future__ import annotations
 
@@ -7,48 +7,48 @@ from typing import Any, Dict, List
 
 
 class AbstractProvider(ABC):
-    """Extension point for adding new LLM providers.
+    """새 LLM 프로바이더를 추가하기 위한 확장 포인트.
 
-    To add a new provider:
-      1. Create a new file in ``app/providers/`` (e.g. ``mistral.py``).
-      2. Subclass ``AbstractProvider`` and implement every abstract method.
-      3. Register the instance in ``app/providers/registry.py``.
+    새 프로바이더 추가 방법:
+      1. ``app/providers/`` 디렉터리에 새 파일 생성 (예: ``mistral.py``).
+      2. ``AbstractProvider``를 상속하고 모든 추상 메서드를 구현.
+      3. ``app/providers/registry.py``에서 인스턴스를 등록.
     """
 
     # ------------------------------------------------------------------
-    # Identity
+    # 프로바이더 식별
     # ------------------------------------------------------------------
 
     @abstractmethod
     def get_model_prefix(self) -> str:
-        """Return the LiteLLM model prefix (e.g. ``"openai"``, ``"gemini"``)."""
+        """LiteLLM 모델 접두사를 반환한다 (예: ``"openai"``, ``"gemini"``)."""
 
     @abstractmethod
     def get_supported_models(self) -> List[str]:
-        """Return the list of model names this provider supports."""
+        """이 프로바이더가 지원하는 모델명 목록을 반환한다."""
 
     # ------------------------------------------------------------------
-    # Request lifecycle
+    # 요청 생명주기
     # ------------------------------------------------------------------
 
     @abstractmethod
     def configure_request(self, litellm_request: Dict[str, Any]) -> Dict[str, Any]:
-        """Inject provider-specific config (API keys, base URLs, etc.)."""
+        """프로바이더별 설정을 주입한다 (API 키, 베이스 URL, Vertex 등)."""
 
     @abstractmethod
     def preprocess_messages(
         self, messages: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Transform messages into the format the provider expects."""
+        """메시지를 프로바이더가 기대하는 형식으로 변환한다."""
 
     # ------------------------------------------------------------------
-    # Optional hooks (override when needed)
+    # 선택적 훅 (필요 시 오버라이드)
     # ------------------------------------------------------------------
 
     def clean_schema(self, schema: Any) -> Any:
-        """Provider-specific tool-schema sanitization. Default: identity."""
+        """프로바이더별 도구 스키마 정리. 기본값: 그대로 반환."""
         return schema
 
     def get_max_output_tokens(self) -> int | None:
-        """Return a hard cap on ``max_tokens``, or ``None`` for no cap."""
+        """``max_tokens``의 하드 캡을 반환한다. 제한 없으면 ``None``."""
         return None

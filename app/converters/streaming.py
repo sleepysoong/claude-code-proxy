@@ -1,4 +1,4 @@
-"""Stream an LiteLLM async generator as Anthropic SSE events."""
+"""LiteLLM 비동기 생성기를 Anthropic SSE 이벤트로 스트리밍한다."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ async def handle_streaming(
     response_generator: AsyncIterator[Any],
     original_request: MessagesRequest,
 ):
-    """Yield Anthropic-compatible SSE events from a LiteLLM streaming response."""
+    """LiteLLM 스트리밍 응답으로부터 Anthropic 호환 SSE 이벤트를 생성한다."""
     message_id = f"msg_{uuid.uuid4().hex[:24]}"
 
     # --- message_start ---
@@ -43,7 +43,7 @@ async def handle_streaming(
         },
     )
 
-    # Open text content block [0]
+    # 텍스트 콘텐츠 블록 [0] 시작
     yield _sse(
         "content_block_start",
         {
@@ -54,7 +54,7 @@ async def handle_streaming(
     )
     yield _sse("ping", {"type": "ping"})
 
-    # Mutable state
+    # 변경 가능한 상태
     tool_index: int | None = None
     accumulated_text = ""
     text_sent = False
@@ -68,7 +68,7 @@ async def handle_streaming(
     try:
         async for chunk in response_generator:
             try:
-                # Usage
+                # 사용량 정보
                 if hasattr(chunk, "usage") and chunk.usage is not None:
                     input_tokens = getattr(chunk.usage, "prompt_tokens", input_tokens)
                     output_tokens = getattr(
@@ -82,7 +82,7 @@ async def handle_streaming(
                 delta = getattr(choice, "delta", getattr(choice, "message", {}))
                 finish_reason = getattr(choice, "finish_reason", None)
 
-                # --- Text delta ---
+                # --- 텍스트 델타 ---
                 delta_content = (
                     getattr(delta, "content", None)
                     if not isinstance(delta, dict)
@@ -101,7 +101,7 @@ async def handle_streaming(
                             },
                         )
 
-                # --- Tool-call deltas ---
+                # --- 도구 호출 델타 ---
                 delta_tool_calls = (
                     getattr(delta, "tool_calls", None)
                     if not isinstance(delta, dict)
@@ -110,7 +110,7 @@ async def handle_streaming(
 
                 if delta_tool_calls:
                     if tool_index is None:
-                        # Close text block before first tool
+                        # 첫 번째 도구 전에 텍스트 블록 닫기
                         if text_sent and not text_block_closed:
                             text_block_closed = True
                             yield _sse(
@@ -188,7 +188,7 @@ async def handle_streaming(
                                 },
                             )
 
-                # --- Finish ---
+                # --- 완료 처리 ---
                 if finish_reason and not has_sent_stop:
                     has_sent_stop = True
 
@@ -236,14 +236,13 @@ async def handle_streaming(
                         },
                     )
                     yield _sse("message_stop", {"type": "message_stop"})
-                    yield "data: [DONE]\n\n"
                     return
 
             except Exception:
-                logger.error(f"Error processing chunk: {traceback.format_exc()}")
+                logger.error(f"청크 처리 오류: {traceback.format_exc()}")
                 continue
 
-        # Generator exhausted without finish_reason
+        # finish_reason 없이 생성기가 소진된 경우
         if not has_sent_stop:
             if tool_index is not None:
                 for i in range(1, last_tool_index + 1):
@@ -260,10 +259,9 @@ async def handle_streaming(
                 },
             )
             yield _sse("message_stop", {"type": "message_stop"})
-            yield "data: [DONE]\n\n"
 
     except Exception:
-        logger.error(f"Streaming error: {traceback.format_exc()}")
+        logger.error(f"스트리밍 오류: {traceback.format_exc()}")
         yield _sse(
             "message_delta",
             {
@@ -273,19 +271,20 @@ async def handle_streaming(
             },
         )
         yield _sse("message_stop", {"type": "message_stop"})
-        yield "data: [DONE]\n\n"
 
 
 # ------------------------------------------------------------------
-# Helpers
+# 헬퍼 함수
 # ------------------------------------------------------------------
 
 
 def _sse(event: str, data: dict) -> str:
+    """SSE 형식 문자열을 생성한다."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
 def _get_attr(obj: Any, key: str, default: Any = None) -> Any:
+    """객체 또는 딕셔너리에서 속성을 가져온다."""
     if isinstance(obj, dict):
         return obj.get(key, default)
     return getattr(obj, key, default)

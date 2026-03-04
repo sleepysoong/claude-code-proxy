@@ -1,4 +1,4 @@
-"""Centralized logging configuration."""
+"""중앙 집중식 로깅 설정."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 
 
 class _MessageFilter(logging.Filter):
-    """Block noisy log messages from LiteLLM and HTTP internals."""
+    """LiteLLM 및 HTTP 내부 라이브러리의 불필요한 로그 메시지를 차단하는 필터."""
 
     _BLOCKED = (
         "LiteLLM completion()",
@@ -25,28 +25,28 @@ class _MessageFilter(logging.Filter):
 
 
 def setup_logging() -> logging.Logger:
-    """Configure and return the application logger."""
+    """애플리케이션 로거를 설정하고 반환한다."""
     logging.basicConfig(
         level=logging.WARN,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
-    # Silence uvicorn loggers
+    # uvicorn 로거 무음 처리
     for name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
-    # Apply global filter
+    # 전역 필터 적용
     root = logging.getLogger()
     root.addFilter(_MessageFilter())
 
     return logging.getLogger("app")
 
 
-# Module-level logger used across the application
+# 애플리케이션 전체에서 사용되는 모듈 수준 로거
 logger = setup_logging()
 
 
-# --- Pretty request logging ---
+# --- 요청 로그 출력 (컬러) ---
 
 
 class Colors:
@@ -70,7 +70,7 @@ def log_request(
     num_tools: int,
     status_code: int,
 ) -> None:
-    """Pretty-print a request summary to stdout."""
+    """요청 요약 정보를 컬러로 stdout에 출력한다."""
     C = Colors
 
     claude_display = f"{C.CYAN}{claude_model}{C.RESET}"

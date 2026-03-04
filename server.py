@@ -1,6 +1,6 @@
-"""Entry point — run with ``uvicorn server:app`` or ``python server.py``."""
+"""진입점 — ``uvicorn server:app`` 또는 ``python server.py``로 실행."""
 
-from app.main import app  # noqa: F401 — re-exported for uvicorn
+from app.main import app  # noqa: F401 — uvicorn을 위해 re-export
 
 if __name__ == "__main__":
     import uvicorn
